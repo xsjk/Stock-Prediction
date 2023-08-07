@@ -18,13 +18,10 @@ class Discriminator(nn.Module):
 
     def forward(self, x):
         conv1 = self.conv1(x)
-        # print(conv1.shape)
         conv1 = self.leaky(conv1)
         conv2 = self.conv2(conv1)
-        # print(conv2.shape)
         conv2 = self.leaky(conv2)
         conv3 = self.conv3(conv2)
-        # print(conv3.shape)
         conv3 = self.leaky(conv3)
         flatten_x = conv3.reshape(conv3.shape[0], conv3.shape[1])
         out_1 = self.linear1(flatten_x)
