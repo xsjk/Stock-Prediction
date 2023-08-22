@@ -110,14 +110,14 @@ if __name__ == "__main__":
     import argparse
     from rich import print
     parser = argparse.ArgumentParser()
-    parser.add_argument('--targets', type=str, nargs='+', default=[])
-    parser.add_argument('--processors', type=str, nargs='+', default=['technical_indicators', 'fourier_components', 'wavelet_features', 'stft_features', 'news_features'], choices=['technical_indicators', 'fourier_components', 'wavelet_features', 'stft_features', 'news_features'])
+    available_targets = sorted(name[:-16] for name in os.listdir('data') if name.endswith('(2017-2023).csv'))
+    available_processors = sorted(map(lambda x: x[4:], filter(lambda x: x.startswith('get_'), globals().keys())))
+    parser.add_argument('--targets', type=str, nargs='+', default=available_targets, choices=available_targets)
+    parser.add_argument('--processors', type=str, nargs='+', default=available_processors, choices=available_processors)
     parser.add_argument('-o', '--save-path', type=str, default='data/processed_dataset.pkl')
     args = parser.parse_args()
 
     print(f"Preprocessing {args.targets} with {args.processors}")
-    if args.targets == []:
-        args.targets = [name[:-16] for name in os.listdir('data') if name.endswith('(2017-2023).csv')]
     args.processors = [globals()[f'get_{name}'] for name in args.processors]
 
     raw_data_dict = {name[:-16]: pd.read_csv(f'data/{name}', index_col=0, parse_dates=True) for name in os.listdir('data') if name[:-16] in args.targets}
@@ -125,4 +125,4 @@ if __name__ == "__main__":
     dataset = preprocess(dataset, raw_data_dict.keys(), args.processors)
     dataset.dropna(inplace=True)
     dataset.to_pickle(args.save_path)
-    print(f"Result saved to {args.save_path}. Shape: {dataset.shape}")
+    print(f"Result saved to '{args.save_path}'. Shape: {dataset.shape}")
