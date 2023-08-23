@@ -1,0 +1,10 @@
+batch_size: 32
+learning_rate: 0.0001
+momentum: null
+num_days_for_predict: 60
+num_days_to_predict: 1
+num_workers: 1
+optimizer: !!python/name:torch.optim.adamax.Adamax ''
+target: Apple
+train_size: 0.8
+val_size: 0.1

@@ -23,6 +23,7 @@ class GAN(LightningModule):
             num_days_to_predict, 
             target='Apple',
             learning_rate=0.00002, 
+            momentum=None,
             num_workers=1, 
             batch_size=128, 
             train_size=0.8, 
@@ -35,6 +36,7 @@ class GAN(LightningModule):
         self.num_days_to_predict = num_days_to_predict
         self.target = target
         self.learning_rate = learning_rate
+        self.momentum = momentum
         self.num_workers = num_workers
         self.batch_size = batch_size
         self.train_size = train_size
@@ -116,8 +118,8 @@ class GAN(LightningModule):
     def validation_step(self, val_batch, batch_idx):
         # calculate RMSE
         x, y = val_batch
-        y_true = model.raw_dataset.inverse_transform(y[:, self.num_days_for_predict].cpu()).flatten()
-        y_pred = model.raw_dataset.inverse_transform(self.G(x).cpu()).flatten()
+        y_true = self.raw_dataset.inverse_transform(y[:, self.num_days_for_predict].cpu()).flatten()
+        y_pred = self.raw_dataset.inverse_transform(self.G(x).cpu()).flatten()
         rmse = mean_squared_error(y_true, y_pred, squared=False)
         self.log("val_RMSE", rmse)
         return rmse
@@ -125,12 +127,16 @@ class GAN(LightningModule):
     
     def test_step(self, test_batch, batch_idx):
         x, y = test_batch
-        y_pred = model.raw_dataset.inverse_transform(self.G(x).cpu()).flatten()
+        y_pred = self.raw_dataset.inverse_transform(self.G(x).cpu()).flatten()
         return y_pred
 
     def configure_optimizers(self):
-        return (self.optimizer(self.G.parameters(), lr = self.learning_rate), 
-                self.optimizer(self.D.parameters(), lr = self.learning_rate))
+        if self.momentum is None:
+            return (self.optimizer(self.G.parameters(), lr=self.learning_rate),
+                    self.optimizer(self.D.parameters(), lr=self.learning_rate))
+        else:
+            return (self.optimizer(self.G.parameters(), lr=self.learning_rate, momentum=self.momentum),
+                    self.optimizer(self.D.parameters(), lr=self.learning_rate, momentum=self.momentum))
 
 
 checkpoint_callback = ModelCheckpoint(
@@ -160,10 +166,11 @@ def config_parser(
 
     
     GAN_parser = new_parser.add_argument_group("GAN", "Arguments for GAN")
-    GAN_parser.add_argument("--target", type=str, default="Apple", choices=targets, help="Target stock to predict")
+    GAN_parser.add_argument("target", type=str, default="Apple", choices=targets, help="Target stock to predict")
     GAN_parser.add_argument("--num-days-for-predict", type=int, default=10, help="Number of days used for prediction")
     GAN_parser.add_argument("--num-days-to-predict", type=int, default=1, help="Number of days to predict")
     GAN_parser.add_argument("--learning-rate", type=float, default=0.00002, help="Learning rate for both generator and discriminator")
+    GAN_parser.add_argument("--momentum", type=float, default=None, help="Momentum for both generator and discriminator")
     GAN_parser.add_argument("--optimizer", type=str, default="adam", choices=optimizers, help="Optimizer for both generator and discriminator")
     GAN_parser.add_argument("--num_workers", type=int, default=1, help="Number of workers for dataloader")
     GAN_parser.add_argument("--batch-size", type=int, default=128, help="Batch size for dataloader")
@@ -189,8 +196,15 @@ if __name__ == "__main__":
 
     optimizer_map = {
         "adam": torch.optim.Adam,
-        "sgd": torch.optim.SGD,
+        "adadelta": torch.optim.Adadelta,
+        "adagrad": torch.optim.Adagrad,
+        "adamw": torch.optim.AdamW,
+        "adamax": torch.optim.Adamax,
+        "asgd": torch.optim.ASGD,
+        "lbfgs": torch.optim.LBFGS,
         "rmsprop": torch.optim.RMSprop,
+        "rprop": torch.optim.Rprop,
+        "sgd": torch.optim.SGD,
     }
 
     parser = config_parser(
@@ -218,6 +232,12 @@ if __name__ == "__main__":
         log_every_n_steps=10,
         callbacks = callbacks,
     )
+
+    checkpoint_callback.dirpath = os.path.join(
+        trainer.logger.log_dir,
+        'checkpoints'
+    )
+
     
     match args.subcommand:
         case "new":                    
@@ -225,6 +245,7 @@ if __name__ == "__main__":
                 num_days_for_predict = args.num_days_for_predict,
                 num_days_to_predict = args.num_days_to_predict,
                 learning_rate = args.learning_rate,
+                momentum = args.momentum,
                 num_workers = args.num_workers,
                 batch_size=args.batch_size,
                 optimizer=args.optimizer,
@@ -235,5 +256,5 @@ if __name__ == "__main__":
             model = GAN.load_from_checkpoint(args.checkpoint_path)
             trainer.fit(model, ckpt_path=args.checkpoint_path)
         
-    trainer.save_checkpoint("model_checkpoint/last.ckpt")
+    trainer.save_checkpoint(os.path.join(checkpoint_callback.dirpath, "last.ckpt"))
 

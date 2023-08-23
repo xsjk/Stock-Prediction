@@ -3,3 +3,6 @@ __pycache__/
 
 # VSCode
 .vscode/
+
+# checkpoints
+*.ckpt

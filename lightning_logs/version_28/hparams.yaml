@@ -1,0 +1,9 @@
+batch_size: 32
+learning_rate: 0.005
+num_days_for_predict: 30
+num_days_to_predict: 1
+num_workers: 1
+optimizer: !!python/name:torch.optim.adadelta.Adadelta ''
+target: Apple
+train_size: 0.8
+val_size: 0.1

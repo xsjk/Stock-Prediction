@@ -87,7 +87,6 @@ class Discriminator(pl.LightningModule):
         self.leaky = nn.LeakyReLU(0.01)
         self.relu = nn.ReLU()
         self.sigmoid = nn.Sigmoid()
-        # self.self_attention = SelfAttention(128)
 
     def forward(self, x):
         conv1 = self.conv1(x)
@@ -97,7 +96,6 @@ class Discriminator(pl.LightningModule):
         conv3 = self.conv3(conv2)
         conv3 = self.leaky(conv3)
         flatten_x = conv3.squeeze()
-        # flatten_x = self.self_attention(flatten_x)
         out_1 = self.linear1(flatten_x)
         out_1 = self.leaky(out_1)
         out_2 = self.linear2(out_1)
@@ -118,10 +116,8 @@ class Generator(pl.LightningModule):
         self.linear_2 = nn.Linear(128, 64)
         self.linear_3 = nn.Linear(64, output_size)
         self.dropout = nn.Dropout(0.2)
-        self.attention = SelfAttention(input_size)
 
     def forward(self, x: torch.Tensor, noise=None):
-        x = self.attention(x)
         h0 = torch.zeros((1, x.size(0), 1024), device=self.device)
         out_1, _ = self.gru_1(x, h0)
         out_1 = self.dropout(out_1)
