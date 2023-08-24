@@ -146,10 +146,10 @@ early_stop_callback = EarlyStopping(
 )
 
 def config_parser(
-        parser: ArgumentParser,
-        targets: list[str] = None,
-        optimizers: list[str] = None,
-):
+    parser: ArgumentParser = ArgumentParser(),
+    targets: list[str] = None,
+    optimizers: list[str] = None,
+) -> ArgumentParser:
 
     subparsers = parser.add_subparsers(title='Subcommands', dest='subcommand', required=True)
 
@@ -201,7 +201,6 @@ if __name__ == "__main__":
     }
 
     parser = config_parser(
-        ArgumentParser(),
         targets = sorted(name[:-16] for name in os.listdir('data') if name.endswith('(2017-2023).csv')),
         optimizers = sorted(optimizer_map.keys())
     )
