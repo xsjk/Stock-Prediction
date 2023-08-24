@@ -27,7 +27,6 @@ class GAN(LightningModule):
             num_workers=1, 
             batch_size=128, 
             train_size=0.8, 
-            val_size=0.1,
             optimizer=torch.optim.Adam,
     ):
         super().__init__()
@@ -40,7 +39,6 @@ class GAN(LightningModule):
         self.num_workers = num_workers
         self.batch_size = batch_size
         self.train_size = train_size
-        self.val_size = val_size
         self.optimizer = optimizer
         self.prepare_data()
         self.G = Generator(
@@ -61,16 +59,13 @@ class GAN(LightningModule):
         self.dataset = TensorDataset(X, Y)
 
     def setup(self, stage: str) -> None:
-        i1 = int(len(self.dataset) * self.train_size)
-        i2 = int(len(self.dataset) * (self.train_size + self.val_size))
+        i = int(len(self.dataset) * self.train_size)
         match stage:
             case "fit":
-                self.train_dataset = TensorDataset(*self.dataset[:i1])
-                self.val_dataset = TensorDataset(*self.dataset[i1:i2])
+                self.train_dataset = TensorDataset(*self.dataset[:i])
+                self.val_dataset = TensorDataset(*self.dataset[i:])
             case "test":
-                self.test_dataset = TensorDataset(*self.dataset[i2:])
-            case "predict":
-                pass
+                self.test_dataset = TensorDataset(*self.dataset[i:])
 
     def train_dataloader(self) -> DataLoader:
         return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
@@ -80,9 +75,6 @@ class GAN(LightningModule):
     
     def test_dataloader(self) -> DataLoader:
         return DataLoader(self.test_dataset, batch_size=len(self.test_dataset), shuffle=False, num_workers=self.num_workers)
-    
-    def predict_dataloader(self) -> DataLoader:
-        return DataLoader(self.dataset, batch_size=len(self.dataset), shuffle=False, num_workers=self.num_workers)
     
     def forward(self, x):
         return self.G(x)
@@ -173,6 +165,7 @@ def config_parser(
     GAN_parser.add_argument("--momentum", type=float, default=None, help="Momentum for both generator and discriminator")
     GAN_parser.add_argument("--optimizer", type=str, default="adam", choices=optimizers, help="Optimizer for both generator and discriminator")
     GAN_parser.add_argument("--num_workers", type=int, default=1, help="Number of workers for dataloader")
+    GAN_parser.add_argument("--train-size", type=float, default=0.8, help="Train size for dataloader")
     GAN_parser.add_argument("--batch-size", type=int, default=128, help="Batch size for dataloader")
     
     resume_parser = resume_parser.add_argument_group("Resume")
@@ -183,7 +176,7 @@ def config_parser(
         trainer_parser.add_argument("--min-epochs", type=int, default=100, help="Minimum number of epochs")
         trainer_parser.add_argument("--max-epochs", type=int, default=-1, help="Maximum number of epochs")
         trainer_parser.add_argument("--early-stop", action="store_true", default=False, help="Whether to use early stopping")
-        trainer_parser.add_argument("--early-stop-patience", type=int, default=100, help="Patience for early stopping")
+        trainer_parser.add_argument("--early-stop-patience", type=int, default=200, help="Patience for early stopping")
 
     return parser
 
@@ -242,12 +235,14 @@ if __name__ == "__main__":
     match args.subcommand:
         case "new":                    
             model = GAN(
+                target=args.target,
                 num_days_for_predict = args.num_days_for_predict,
                 num_days_to_predict = args.num_days_to_predict,
                 learning_rate = args.learning_rate,
                 momentum = args.momentum,
                 num_workers = args.num_workers,
                 batch_size=args.batch_size,
+                train_size=args.train_size,
                 optimizer=args.optimizer,
             )
             trainer.fit(model)

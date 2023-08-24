@@ -1,7 +1,0 @@
-batch_size: 64
-learning_rate: 3.0e-06
-num_days_for_predict: 50
-num_days_to_predict: 1
-num_workers: 1
-train_size: 0.8
-val_size: 0.1

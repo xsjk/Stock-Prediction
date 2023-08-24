@@ -18,12 +18,10 @@ python -m utils.train resume model_checkpoint.ckpt
 python -m utils.preprocess --targets Apple --processors technical_indicators fourier_components news_features
 ```
 
+```bash
+tensorboard --logdir lightning_logs   
+```
+
 ## Requirements
 
 python >= 3.10
-<!-- pytorch_lightning >=  -->
-<!-- tensorboard >=  -->
-
-$$
-\tilde{x}
-$$

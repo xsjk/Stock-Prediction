@@ -55,6 +55,11 @@ class VAE(pl.LightningModule):
         output = self.decode(z)
         return output, z, mu, logVar
     
+    def loss_function(self, recon_x, x, mu, logVar):
+        BCE = nn.functional.binary_cross_entropy(recon_x, x, reduction='sum')
+        KLD = -0.5 * torch.sum(1 + logVar - mu.pow(2) - logVar.exp())
+        return BCE + KLD
+    
 
 class SelfAttention(pl.LightningModule):
     def __init__(self, in_dim):
