@@ -110,7 +110,7 @@ class GAN(LightningModule):
     def validation_step(self, val_batch, batch_idx):
         # calculate RMSE
         x, y = val_batch
-        y_true = self.raw_dataset.inverse_transform(y[:, self.num_days_for_predict].cpu()).flatten()
+        y_true = self.raw_dataset.inverse_transform(y[:, self.num_days_for_predict:self.num_days_for_predict+self.num_days_to_predict, 0].cpu()).flatten()
         y_pred = self.raw_dataset.inverse_transform(self.G(x).cpu()).flatten()
         rmse = mean_squared_error(y_true, y_pred, squared=False)
         self.log("val_RMSE", rmse)
@@ -205,7 +205,6 @@ if __name__ == "__main__":
         optimizers = sorted(optimizer_map.keys())
     )
     args = parser.parse_args()
-    args.optimizer = optimizer_map[args.optimizer]
 
     callbacks = [checkpoint_callback]
     if args.early_stop:
@@ -232,7 +231,8 @@ if __name__ == "__main__":
 
     
     match args.subcommand:
-        case "new":                    
+        case "new":               
+            args.optimizer = optimizer_map[args.optimizer]     
             model = GAN(
                 target=args.target,
                 num_days_for_predict = args.num_days_for_predict,
